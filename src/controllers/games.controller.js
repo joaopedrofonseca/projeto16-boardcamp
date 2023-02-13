@@ -14,11 +14,11 @@ export async function insertGame(req, res) {
     }
 }
 
-export async function getGame(req,res){
-    try{
+export async function getGame(_, res) {
+    try {
         const games = await db.query(`SELECT * FROM games`)
         return res.send(games.rows)
-    }catch(err){
+    } catch (err) {
         return res.status(500).send(err.message)
     }
 }
