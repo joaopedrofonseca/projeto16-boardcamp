@@ -13,3 +13,12 @@ export async function insertGame(req, res) {
         return res.status(500).send(err.message)
     }
 }
+
+export async function getGame(req,res){
+    try{
+        const games = await db.query(`SELECT * FROM games`)
+        return res.send(games.rows)
+    }catch(err){
+        return res.status(500).send(err.message)
+    }
+}
