@@ -33,8 +33,8 @@ export async function postRental(req, res) {
     }
 }
 
-export async function getRentals(req, res) {
-    try{
+export async function getRentals(_, res) {
+    try {
         const rentals = await db.query(`SELECT 
         rentals.*, 
         JSON_BUILD_OBJECT('id', customers.id, 'name', customers.name) AS customer,
@@ -43,8 +43,27 @@ export async function getRentals(req, res) {
         JOIN customers ON rentals."customerId" = customers.id
         JOIN games ON rentals."gameId" = games.id
         ;`)
-        return res.send(rentals.rows)    
-    }catch(err){
+        return res.send(rentals.rows)
+    } catch (err) {
+        return res.status(500).send(err.message)
+    }
+}
+
+export async function finishRental(req, res) {
+    const { id } = req.params
+    const today = dayjs().format('YYYY-MM-DD')
+
+    try {
+        const rent = await db.query(`SELECT * FROM rentals WHERE id=$1`, [id])
+        if (rent.rows.length === 0) return res.sendStatus(404)
+        if (rent.rows[0].returnDate !== null) return res.sendStatus(400)
+        const game = await db.query(`SELECT * FROM games WHERE id = $1`, [rent.rows[0].gameId])
+        const delayDays = dayjs(today).diff(rent.rows[0].rentDate, 'day')
+
+        await db.query(`UPDATE rentals SET "returnDate"=$1, "delayFee"=$2 WHERE id=$3`, [today, delayDays * game.rows[0].pricePerDay])
+        await db.query(`UPDATE games SET "stockTotal" = $1 WHERE id=$2;`, [game.rows[0].stockTotal++, rent.rows[0].gameId])
+        return res.sendStatus(200)
+    } catch (err) {
         return res.status(500).send(err.message)
     }
 }
