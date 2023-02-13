@@ -58,12 +58,12 @@ export async function finishRental(req, res) {
         if (rent.rows.length === 0) return res.sendStatus(404)
         if (rent.rows[0].returnDate !== null) return res.sendStatus(400)
 
+        const dayExpire = dayjs(rent.rows[0].rentDate).add(rent.rows[0].daysRented, "day")
 
         const game = await db.query(`SELECT * FROM games WHERE id = $1;`, [rent.rows[0].gameId])
-        const delayDays = dayjs(today).diff(rent.rows[0].rentDate, 'day')
-        
+        const delayDays = dayjs(today).diff(dayExpire, 'day')
 
-        await db.query(`UPDATE rentals SET "returnDate"=$1, "delayFee"=$2 WHERE id=$3`, [today, delayDays * game.rows[0].pricePerDay, id])
+        await db.query(`UPDATE rentals SET "returnDate"=$1, "delayFee"=$2 WHERE id=$3`, [today,delayDays < 0 ? 0 : delayDays * game.rows[0].pricePerDay, id])
         await db.query(`UPDATE games SET "stockTotal" = $1 WHERE id=$2;`, [game.rows[0].stockTotal++, rent.rows[0].gameId])
         return res.sendStatus(200)
     } catch (err) {
